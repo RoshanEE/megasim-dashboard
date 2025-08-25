@@ -288,11 +288,11 @@ teams = sorted(players["Team"].astype(str).fillna("").unique(), key=lambda x: st
 positions = sorted(players["Position"].astype(str).fillna("").unique(), key=lambda x: str(x).lower())
 names = sorted(players["Name"].astype(str).fillna("").unique(), key=lambda x: str(x).lower())
 
-st.sidebar.header("Filters (case-insensitive)")
+st.sidebar.header("Filters")
 
 team_sel = st.sidebar.selectbox("Team", ["All"] + teams)
 pos_sel = st.sidebar.selectbox("Position", ["All"] + positions)
-search_name = st.sidebar.text_input("Search player (partial, case-insensitive)")
+search_name = st.sidebar.text_input("Search player")
 
 # Matches Played filter (minimum)
 min_matches = int(players["Matches Played"].min())

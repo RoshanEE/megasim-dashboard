@@ -11,8 +11,6 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 TARGET = DATA_DIR / "latest.xlsx"
 
-st.caption(f"Data directory: `{DATA_DIR}`")
-
 if admin_login():
     st.success("Authenticated as Admin.")
     admin_logout_button()
@@ -32,7 +30,7 @@ if admin_login():
         st.info("All pages will now read this file. Switch to Player Stats and hit 'Reload data' if needed.")
 
     if TARGET.exists():
-        st.caption(f"Current data file present ✔ — `{TARGET}` (last modified: {time.ctime(TARGET.stat().st_mtime)})")
+        st.caption(f"Current data file present ✔ — `{Path(TARGET).name}` (last modified: {time.ctime(TARGET.stat().st_mtime)})")
     else:
         st.warning(f"No data file found yet at: `{TARGET}`")
 

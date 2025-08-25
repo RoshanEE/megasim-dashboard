@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 
-st.set_page_config(page_title="MEGASIM Dashboard", layout="wide")
+st.set_page_config(page_title="Home", layout="wide")
 
 st.title("⚽ MEGASIM Dashboard")
 
