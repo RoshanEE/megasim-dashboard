@@ -231,26 +231,33 @@ def build_player_df(dfs: dict):
 # Radar chart function
 # ----------------------------
 def radar_chart_for_player(row: pd.Series):
+    # Use percentiles for normalization
     labels = ["Matches Played", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red"]
-    vals = [
-        row.get("Matches Played", 0),
-        row.get("Rating", 0),
-        row.get("goals", 0),
-        row.get("assists", 0),
-        row.get("saves", 0),
-        row.get("Clean Sheet", 0),
-        row.get("yellow", 0),
-        row.get("red", 0),
-    ]
-    # ensure numeric
-    vals = [float(v or 0) for v in vals]
+    keys = ["Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red"]
+    # Access the global players DataFrame for percentiles
+    global players
+    vals = []
+    for label in keys:
+        col = label
+        if col in players.columns:
+            series = players[col]
+            value = row.get(col, 0)
+            # Calculate percentile
+            percentile = (series < value).mean() * 100 if series.notna().any() else 0
+            vals.append(percentile)
+        else:
+            vals.append(0)
     # close loop
     labels = labels + [labels[0]]
     vals = vals + [vals[0]]
 
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(r=vals, theta=labels, fill="toself", name=row.get("Name", "Player")))
-    fig.update_layout(template="plotly_dark", polar=dict(radialaxis=dict(visible=True)))
+    fig.update_layout(
+        template="plotly_dark",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100], tickvals=[0, 25, 50, 75, 100], ticktext=["0%","25%","50%","75%","100%"])),
+        title="Percentile-normalized Crab Chart"
+    )
     return fig
 
 
