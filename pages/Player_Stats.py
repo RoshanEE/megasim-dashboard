@@ -232,8 +232,8 @@ def build_player_df(dfs: dict):
 # ----------------------------
 def radar_chart_for_player(row: pd.Series):
     # Use percentiles for normalization
-    labels = ["Matches Played", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red"]
-    keys = ["Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red"]
+    labels = ["Matches Played", "MOTM", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
+    keys = ["Matches Played", "MOTM", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
     # Access the global players DataFrame for percentiles
     global players
     vals = []
@@ -271,7 +271,7 @@ st.title("⚽ Player Stats")
 # Single column for reload button, shorter text
 if st.button("🔄 Reload Data", help="Clear cache and reload all data"):
     st.cache_data.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 dfs = load_excel_as_dfs(str(DATA_FILE))
 if dfs is None:
