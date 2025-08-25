@@ -158,26 +158,26 @@ def build_player_df(dfs: dict):
 
     # Helper to merge a stat sheet into base
     def merge_stat(sheet_key, want_total_name, extra_cols=None):
-        """sheet_key: lowercase sheet name, want_total_name: final column name to add to base,
-           extra_cols: dict mapping final_name->candidate_column_names in sheet (lowercase)"""
-        if sheet_key not in dfs:
+        if sheet_key.lower() not in dfs:
             return pd.Series([0] * len(base), index=base.index)
         df = dfs[sheet_key].copy()
-        # ensure df has 'name' for join - try to find name-like column
+
         nm = _find_col(df, ["name", "player", "player_name"])
         if nm is None:
-            # cannot join: return zeros
             return pd.Series([0] * len(base), index=base.index)
 
         df["player_key"] = df[nm].astype(str).apply(_name_key)
 
-        # compute total series
-        total = _compute_total_series(df, exclude_cols=[nm])
-        total.index = df.index  # align
-
-        # map player_key -> total value
+        # Try explicit total column first
+        total_col = _find_col(df, [want_total_name, "total", "count", "number"])
+        if total_col:
+            total = pd.to_numeric(df[total_col], errors="coerce").fillna(0)
+        else:
+            # Fallback: compute from all numeric cols except name
+            total = _compute_total_series(df, exclude_cols=[nm])
         mapping = pd.Series(total.values, index=df["player_key"]).to_dict()
         return base["player"].map(mapping).fillna(0)
+
 
     # Merge primary totals
     base["goals"] = merge_stat("goals", "goals")
@@ -198,10 +198,10 @@ def build_player_df(dfs: dict):
     else:
         base["clean_sheet"] = 0
 
-    base["yellow"] = merge_stat("yellow", "yellow")
-    base["red"] = merge_stat("red", "red")
-    base["motm"] = merge_stat("motm", "motm")
-    base["lotm"] = merge_stat("lotm", "lotm")
+    base["yellow"] = merge_stat("yellow", "total")
+    base["red"] = merge_stat("red", "total")
+    base["motm"] = merge_stat("motm", "total")
+    base["lotm"] = merge_stat("lotm", "total")
 
     # numeric conversions & fillna
     for c in ["rating", "matches_played", "goals", "assists", "saves", "clean_sheet", "yellow", "red", "motm", "lotm"]:
@@ -214,15 +214,14 @@ def build_player_df(dfs: dict):
     for c in out_cols:
         if c not in base.columns:
             base[c] = 0
-
     # rename for nicer display
     base = base.rename(columns={"name_orig": "Name", "team": "Team", "position": "Position",
                                 "rating": "Rating", "matches_played": "Matches Played",
-                                "clean_sheet": "Clean Sheet"})
+                                "clean_sheet": "Clean Sheet", "motm": "MOTM", "lotm": "LOTM"})
 
     final_cols = [
         "Name", "player", "Position", "Team", "Rating", "Matches Played",
-        "goals", "assists", "saves", "Clean Sheet", "yellow", "red", "motm", "lotm"
+        "goals", "assists", "saves", "Clean Sheet", "yellow", "red", "MOTM", "LOTM"
     ]
     return base[final_cols]
 
@@ -258,14 +257,14 @@ def radar_chart_for_player(row: pd.Series):
 # ----------------------------
 # Main App UI
 # ----------------------------
-st.title("⚽ Player Stats (case-insensitive columns)")
+st.title("⚽ Player Stats")
 
 # reload button that clears st.cache_data
-c1, c2 = st.columns([1, 10])
-with c1:
-    if st.button("🔄 Reload data"):
-        st.cache_data.clear()
-        st.experimental_rerun()
+
+# Single column for reload button, shorter text
+if st.button("🔄 Reload Data", help="Clear cache and reload all data"):
+    st.cache_data.clear()
+    st.experimental_rerun()
 
 dfs = load_excel_as_dfs(str(DATA_FILE))
 if dfs is None:
@@ -285,9 +284,23 @@ positions = sorted(players["Position"].astype(str).fillna("").unique(), key=lamb
 names = sorted(players["Name"].astype(str).fillna("").unique(), key=lambda x: str(x).lower())
 
 st.sidebar.header("Filters (case-insensitive)")
+
 team_sel = st.sidebar.selectbox("Team", ["All"] + teams)
 pos_sel = st.sidebar.selectbox("Position", ["All"] + positions)
 search_name = st.sidebar.text_input("Search player (partial, case-insensitive)")
+
+# Matches Played filter (minimum)
+min_matches = int(players["Matches Played"].min())
+max_matches = int(players["Matches Played"].max())
+default_min = min(3, max_matches) if max_matches >= 3 else min_matches
+min_matches_played = st.sidebar.number_input(
+    "Minimum Matches Played (>",
+    min_value=min_matches,
+    max_value=max_matches,
+    value=default_min,
+    step=1,
+    help="Show only players with more than this number of matches played."
+)
 
 df_view = players.copy()
 
@@ -298,13 +311,30 @@ if pos_sel and pos_sel != "All":
     df_view = df_view[df_view["Position"].str.lower() == str(pos_sel).lower()]
 
 if search_name:
+
     df_view = df_view[df_view["Name"].str.lower().str.contains(search_name.lower(), na=False)]
 
+# Apply matches played filter (strictly greater than)
+df_view = df_view[df_view["Matches Played"] > min_matches_played]
+
 # Columns to display (present and friendly)
-display_cols = ["Name", "Team", "Position", "Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "yellow", "red"]
+display_cols = ["Name", "Team", "Position", "Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "yellow", "red", "MOTM", "LOTM"]
 # show dataframe
+
+# Per Match toggle
+per_match = st.checkbox("Show per match stats", value=False, help="Display stats per match (except Name, Team, Position, Matches Played)")
+
+df_display = df_view.copy()
+if per_match:
+    # Columns to convert to per match (exclude these)
+    exclude_cols = ["Name", "Team", "Position", "Matches Played", "MOTM", "LOTM", "Rating"]
+    for col in display_cols:
+        if col not in exclude_cols:
+            # Avoid division by zero
+            df_display[col] = df_display.apply(lambda row: row[col] / row["Matches Played"] if row["Matches Played"] else 0, axis=1)
+
 st.subheader("Player table")
-st.dataframe(df_view[display_cols].fillna(0).sort_values(by="Rating", ascending=False), use_container_width=True)
+st.dataframe(df_display[display_cols].fillna(0).sort_values(by="Rating", ascending=False), use_container_width=True)
 
 # Select single player to show crab chart
 selected = st.selectbox("Select player for Crab Chart (exact)", ["None"] + names)
