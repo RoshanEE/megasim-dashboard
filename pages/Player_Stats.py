@@ -292,7 +292,7 @@ search_name = st.sidebar.text_input("Search player (partial, case-insensitive)")
 # Matches Played filter (minimum)
 min_matches = int(players["Matches Played"].min())
 max_matches = int(players["Matches Played"].max())
-default_min = min(3, max_matches) if max_matches >= 3 else min_matches
+default_min = min(3, max_matches) if max_matches >= 0 else min_matches
 min_matches_played = st.sidebar.number_input(
     "Minimum Matches Played (>",
     min_value=min_matches,
