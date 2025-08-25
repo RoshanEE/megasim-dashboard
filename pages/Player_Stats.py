@@ -14,8 +14,6 @@ st.set_page_config(page_title="Player Stats", layout="wide", initial_sidebar_sta
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_FILE = BASE_DIR / "data" / "latest.xlsx"
 
-st.caption(f"Looking for data file at: `{DATA_FILE}`")
-
 
 # ----------------------------
 # Helpers: robust, case-insensitive column handling
@@ -344,11 +342,42 @@ st.subheader("Player table")
 st.dataframe(df_display[display_cols].fillna(0).sort_values(by="Rating", ascending=False), use_container_width=True)
 
 # Select single player to show crab chart
-selected = st.selectbox("Select player for Crab Chart (exact)", ["None"] + names)
-if selected and selected != "None":
-    sel_row = df_view[df_view["Name"].str.lower() == selected.lower()]
-    if not sel_row.empty:
-        st.subheader(f"🕸 Crab chart — {selected}")
-        st.plotly_chart(radar_chart_for_player(sel_row.iloc[0]), use_container_width=True)
-    else:
-        st.info("Selected player not found in current filtered view.")
+
+# Multi-player selection for crab chart comparison
+selected_players = st.multiselect(
+    "Select player(s) for Crab Chart comparison (exact)",
+    names,
+    default=[]
+)
+if selected_players:
+    st.subheader(f"🕸 Crab chart comparison — {', '.join(selected_players)}")
+    import plotly.graph_objects as go
+    labels = ["Matches Played", "MOTM", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
+    keys = ["Matches Played", "MOTM", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
+    labels_closed = labels + [labels[0]]
+    # global players
+    fig = go.Figure()
+    for selected in selected_players:
+        sel_row = df_view[df_view["Name"].str.lower() == selected.lower()]
+        if not sel_row.empty:
+            row = sel_row.iloc[0]
+            vals = []
+            for label in keys:
+                col = label
+                if col in players.columns:
+                    series = players[col]
+                    value = row.get(col, 0)
+                    percentile = (series < value).mean() * 100 if series.notna().any() else 0
+                    vals.append(percentile)
+                else:
+                    vals.append(0)
+            vals_closed = vals + [vals[0]]
+            fig.add_trace(go.Scatterpolar(r=vals_closed, theta=labels_closed, fill="toself", name=row.get("Name", "Player")))
+    fig.update_layout(
+        template="plotly_dark",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100], tickvals=[0, 25, 50, 75, 100], ticktext=["0%","25%","50%","75%","100%"])),
+        title="Percentile-normalized Crab Chart Comparison"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+elif selected_players == []:
+    st.info("Select one or more players to view crab chart comparison.")
