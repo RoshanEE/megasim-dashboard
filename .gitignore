@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit & cache
+.streamlit/
+.cache/
+*.xlsx
+*.xls
+data/*.xlsx
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS files
+.DS_Store
