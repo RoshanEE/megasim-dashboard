@@ -230,8 +230,8 @@ def build_player_df(dfs: dict):
 # ----------------------------
 def radar_chart_for_player(row: pd.Series):
     # Use percentiles for normalization
-    labels = ["Matches Played", "MOTM", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
-    keys = ["Matches Played", "MOTM", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
+    labels = ["Matches Played", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM", "MOTM"]
+    keys = ["Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM", "MOTM"]
     # Access the global players DataFrame for percentiles
     global players
     vals = []
@@ -352,8 +352,8 @@ selected_players = st.multiselect(
 if selected_players:
     st.subheader(f"🕸 Crab chart comparison — {', '.join(selected_players)}")
     import plotly.graph_objects as go
-    labels = ["Matches Played", "MOTM", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
-    keys = ["Matches Played", "MOTM", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM"]
+    labels = ["Matches Played", "Rating", "Goals", "Assists", "Saves", "Clean Sheet", "Yellow", "Red", "LOTM", "MOTM"]
+    keys = ["Matches Played", "Rating", "goals", "assists", "saves", "Clean Sheet", "Yellow", "Red", "LOTM", "MOTM"]
     labels_closed = labels + [labels[0]]
     # global players
     fig = go.Figure()
